@@ -8,9 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createUser = exports.getAllUsers = void 0;
+exports.signIn = exports.signUp = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma = new client_1.PrismaClient();
 //@ts-ignore
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -19,26 +23,52 @@ const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         res.json(users);
     }
     catch (error) {
-        res.status(500).json({ error: 'Failed to fetch users' });
+        res.status(500).json({ error: "Failed to fetch users" });
     }
 });
 exports.getAllUsers = getAllUsers;
-const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, email } = req.body;
-    if (!name || !email) {
-        return res.status(400).json({ error: 'Name and email are required' });
+const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: "Name and email are required" });
     }
     try {
         const user = yield prisma.user.create({
-            data: { name, email },
+            data: { name, email, password },
         });
         res.status(201).json(user);
     }
     catch (error) {
-        if (error.code === 'P2002') {
-            return res.status(409).json({ error: 'Email already exists' });
+        if (error.code === "P2002") {
+            return res.status(409).json({ error: "Email already exists" });
         }
-        res.status(500).json({ error: 'Failed to create user' });
+        res.status(500).json({ error: "Failed to create user" });
     }
 });
-exports.createUser = createUser;
+exports.signUp = signUp;
+const signIn = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+    }
+    try {
+        const user = yield prisma.user.findUnique({
+            where: { email },
+        });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        if (user.password !== password) {
+            return res.status(401).json({ error: "Incorrect password" });
+        }
+        //@ts-ignore
+        const token = jsonwebtoken_1.default.sign({ id: user.id }, process.env.JWT_SECRET);
+        res.status(200).json({
+            token,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Failed to sign in" });
+    }
+});
+exports.signIn = signIn;

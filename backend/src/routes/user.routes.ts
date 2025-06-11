@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { createUser, getAllUsers } from '../controller/user.controller';
+import { signUp, getAllUsers, signIn } from '../controller/user.controller';
+import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
 
-router.get('/', getAllUsers);
-router.post('/', createUser);
+router.get('/',authMiddleware, getAllUsers);
+router.post('/signup', signUp);
+router.post('/signin', signIn);
+
 
 export default router;
